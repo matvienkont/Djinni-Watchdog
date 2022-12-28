@@ -1,0 +1,24 @@
+{
+  "name": "djinni-watcher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run clean && tsc && npm run copy-files",
+    "clean": "rimraf dist/",
+    "copy-files": "copyfiles .env ./dist",
+    "watch-ts": "npm run build && tsc -w"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "copyfiles": "^2.4.1",
+    "rimraf": "^3.0.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "typeorm": "^0.3.11"
+  }
+}
