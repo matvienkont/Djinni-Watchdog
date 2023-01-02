@@ -7,3 +7,5 @@ export enum DJINNI_SELECTORS {
     recruiterSelector = 'div.list-jobs__details div.list-jobs__details__info a.link-muted',
     descriptionSelector = 'div.list-jobs__description p',
 };
+
+export const DJINNI_TRACKING_URL = 'https://djinni.co/jobs/?keywords=-fullstack+-full&all-keywords=&any-of-keywords=&exclude-keywords=&primary_keyword=Node.js&exp_level=2y&exp_level=3y&salary=1500';

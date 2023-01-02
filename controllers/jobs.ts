@@ -1,5 +1,5 @@
 import cfg from "../config.js";
-import { DJINNI_SELECTORS } from "../constants.js";
+import { DJINNI_SELECTORS, DJINNI_TRACKING_URL } from "../constants.js";
 import { DataBase } from "../db/connect.js";
 import { Job } from "../db/entity/job.entity.js";
 import { HttpRequester } from "../services/http_requests.js";
@@ -43,7 +43,7 @@ export class JobsWatcher {
 
     async getHtmlPageOfJobs (page: number) {
         const funcName = '[getHtmlPageOfJobs]';
-        const url = page ? cfg.trackingUrl + `&page=${++page}` : cfg.trackingUrl;
+        const url = page ? DJINNI_TRACKING_URL + `&page=${++page}` : DJINNI_TRACKING_URL;
         try {
             const response = await http.get(url);
             if (DataTypesUtils.isString(response.data)) {

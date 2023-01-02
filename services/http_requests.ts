@@ -25,5 +25,5 @@ export class HttpRequester {
         } catch (err: any) {
             console.error(funcName, 'Sending TG Notification', err.message ? err.message : JSON.stringify(err));
         }
-    };
-};
+    }
+}
