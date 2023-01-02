@@ -46,3 +46,9 @@ export class Extractors {
         return data;
     }
 };
+
+export class TimeUtils {
+    static sleepMs (ms: number) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+};

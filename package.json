@@ -9,7 +9,7 @@
     "clean": "rimraf dist/",
     "copy-files": "copyfiles .env ./dist",
     "watch-ts": "npm run build && tsc -w",
-    "run-migrations": "npx typeorm-ts-node-esm migration:run -d db/connect.ts"
+    "run-migrations": "npx typeorm migration:run -d dist/db/connect.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "axios": "^1.2.1",
+    "cron": "^2.1.0",
     "dotenv": "^16.0.3",
     "node-html-parser": "^6.1.4",
     "pg": "^8.8.0",

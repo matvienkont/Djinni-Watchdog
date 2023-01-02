@@ -15,15 +15,5 @@ export const DataBase = new DataSource({
     database: 'djinni',
     entities: [__dirname + '/entity/*.entity.js'],
     migrations: [__dirname + '/migrations/*.js'],
-    synchronize: true,
     // logging: true,
 });
-
-(async () => {
-    try {
-        await DataBase.initialize();
-        console.log('Connected to a database.');
-    } catch (err: any) {
-        throw new Error(`Could not connect to database ${err.message}`);
-    }
-})();

@@ -2,7 +2,8 @@ import { config as configEnv } from 'dotenv';
 
 const envVariables = [
     'POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USERNAME', 'POSTGRES_PASSWORD',
-    'DJINNI_DOCUMENT_COOKIE', 'TRACKING_URL',
+    'DJINNI_DOCUMENT_COOKIE', 'TRACKING_URL', 'TELEGRAM_BOT_TOKEN',
+    'TELEGRAM_CHAT_ID',
 ];
 
 type cfgType = {
@@ -12,6 +13,8 @@ type cfgType = {
     postgresPassword: string,
     djinniDocumentCookie: string,
     trackingUrl: string,
+    telegramBotToken: string,
+    telegramChatId: string,
 };
 
 let cfg: cfgType;
@@ -31,6 +34,8 @@ cfg = {
     postgresPassword: process.env.POSTGRES_PASSWORD!,
     djinniDocumentCookie: process.env.DJINNI_DOCUMENT_COOKIE!,
     trackingUrl: process.env.TRACKING_URL!,
+    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN!,
+    telegramChatId: process.env.TELEGRAM_CHAT_ID!,
 }
 
 export default cfg;
