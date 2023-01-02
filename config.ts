@@ -1,7 +1,7 @@
 import { config as configEnv } from 'dotenv';
 
 const envVariables = [
-    'POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USERNAME', 'POSTGRES_PASSWORD',
+    'POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USERNAME', 'POSTGRES_PASSWORD', 'POSTGRES_DB_NAME',
     'DJINNI_DOCUMENT_COOKIE', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID',
 ];
 
@@ -10,6 +10,7 @@ type cfgType = {
     postgresPort: number,
     postgresUsername: string,
     postgresPassword: string,
+    postgresDbName: string,
     djinniDocumentCookie: string,
     telegramBotToken: string,
     telegramChatId: string,
@@ -30,6 +31,7 @@ cfg = {
     postgresPort: Number(process.env.POSTGRES_PORT!),
     postgresUsername: process.env.POSTGRES_USERNAME!,
     postgresPassword: process.env.POSTGRES_PASSWORD!,
+    postgresDbName: process.env.POSTGRES_DB_NAME!,
     djinniDocumentCookie: process.env.DJINNI_DOCUMENT_COOKIE!,
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN!,
     telegramChatId: process.env.TELEGRAM_CHAT_ID!,

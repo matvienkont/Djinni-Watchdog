@@ -12,7 +12,7 @@ export const DataBase = new DataSource({
     port: cfg.postgresPort,
     username: cfg.postgresUsername,
     password: cfg.postgresPassword,
-    database: 'djinni',
+    database: cfg.postgresDbName,
     entities: [__dirname + '/entity/*.entity.js'],
     migrations: [__dirname + '/migrations/*.js'],
     // logging: true,
