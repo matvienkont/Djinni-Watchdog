@@ -14,23 +14,30 @@ export class JobsWatcher {
         const funcName = '[watchJobs]';
         let page = 0;
         let unseenJobs: Job[] = [];
-        const latestSeenJobId = await this.retriveLatestSeenJobId();
-        do {
-            try {
-                const htmlPage = await this.getHtmlPageOfJobs(page);
-                const { unseenJobsOnPage, toContinueSearching, totalJobs } = await this.retriveUnseenJobsFromHtml(htmlPage, latestSeenJobId);
-                if (unseenJobsOnPage && unseenJobsOnPage.length) {
-                    unseenJobs = [...unseenJobsOnPage.reverse(), ...unseenJobs];
-                }
-                if (toContinueSearching && totalJobs && (page + 1) * JOBS_PER_PAGE < totalJobs) page++; else page = 0;
-            } catch (err) {
-                console.error(funcName, err);
-            }
-        } while (page)
 
-        if (!firstStart && unseenJobs.length) {
+        try {
+            console.log(funcName, 'Starting looking for new jobs...');
+            const latestSeenJobId = await this.retriveLatestSeenJobId();
+            do {
+                    const htmlPage = await this.getHtmlPageOfJobs(page);
+                    const { unseenJobsOnPage, toContinueSearching, totalJobs } = await this.retriveUnseenJobsFromHtml(htmlPage, latestSeenJobId);
+                    if (unseenJobsOnPage && unseenJobsOnPage.length) {
+                        unseenJobs = [...unseenJobsOnPage.reverse(), ...unseenJobs];
+                    }
+                    if (toContinueSearching && totalJobs && (page + 1) * JOBS_PER_PAGE < totalJobs) page++; else page = 0;
+
+            } while (page)
+        } catch (err) {
+            console.error(funcName, err);
+        }
+
+        if (unseenJobs.length) {
             await this.saveUnseenJobs(unseenJobs);
-            await this.sendTgNotifications(unseenJobs);
+            if (!firstStart) {
+                await this.sendTgNotifications(unseenJobs);
+            }
+        } else {
+            console.log(funcName, 'No new jobs found.');
         }
     }
 
