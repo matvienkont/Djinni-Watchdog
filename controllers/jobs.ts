@@ -108,7 +108,7 @@ export class JobsWatcher {
     async saveUnseenJobs (jobs: Job[]) {
         const funcName = '[saveUnseenJobs]';
         try {
-            const insertResults = await DataBase.manager.insert(Job, jobs);
+            const insertResults = await DataBase.manager.upsert(Job, jobs, ['jobId']);
             console.log(funcName, 'Successfully saved unseen', insertResults.identifiers.length, 'jobs');
         } catch (err: any) {
             console.error(funcName, 'Error saving unseen jobs into the database', err.message);
