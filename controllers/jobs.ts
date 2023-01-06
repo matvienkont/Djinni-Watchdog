@@ -1,3 +1,4 @@
+import { Dictionary } from "ts-essentials";
 import cfg from "../config.js";
 import { DJINNI_SELECTORS, DJINNI_TRACKING_URL } from "../constants.js";
 import { DataBase } from "../db/connect.js";
@@ -8,6 +9,7 @@ import { HTMLElement } from 'node-html-parser';
 
 const http = new HttpRequester();
 const JOBS_PER_PAGE = 15;
+const DbManager = DataBase.manager;
 
 export class JobsWatcher {
     async watchJobs (firstStart: boolean) {
@@ -17,10 +19,9 @@ export class JobsWatcher {
 
         try {
             console.log(funcName, 'Starting looking for new jobs...');
-            const latestSeenJobId = await this.retriveLatestSeenJobId();
             do {
                     const htmlPage = await this.getHtmlPageOfJobs(page);
-                    const { unseenJobsOnPage, toContinueSearching, totalJobs } = await this.retriveUnseenJobsFromHtml(htmlPage, latestSeenJobId);
+                    const { unseenJobsOnPage, toContinueSearching, totalJobs } = await this.retriveUnseenJobsFromHtml(htmlPage);
                     if (unseenJobsOnPage && unseenJobsOnPage.length) {
                         unseenJobs = [...unseenJobsOnPage.reverse(), ...unseenJobs];
                     }
@@ -57,7 +58,7 @@ export class JobsWatcher {
         }
     }
 
-    async retriveUnseenJobsFromHtml (html: string, latestSeenJobId: number | undefined) {
+    async retriveUnseenJobsFromHtml (html: string) {
         const funcName = '[extractJobData]';
         let toContinueSearching = true;
         const totalJobs = Number(Extractors.extractNodeFromText(html, DJINNI_SELECTORS.pagesSelector)?.[0]?.innerText);
@@ -69,36 +70,54 @@ export class JobsWatcher {
             return { unseenJobsOnPage: [], toContinueSearching, totalJobs: 0 };
         }
 
-        const unseenJobsOnPage: Job[] = [];
+        const jobsOnPage: Job[] = [];
         for (const node of nodeJobs) {
             const titleEl = Extractors.pickElement(node, DJINNI_SELECTORS.profileSelector);
-            const jobTitle = titleEl?.text?.trim();
-            const jobUrl = titleEl?.getAttribute('href'), jobId = Number(jobUrl?.match(/\d+?(?=-)/gm)?.[0]);
-            const company = Extractors.pickElement(node, DJINNI_SELECTORS.companySelector)?.text?.trim();
-            const recruiter = Extractors.pickElement(node, DJINNI_SELECTORS.recruiterSelector)?.text?.trim()?.replace('\n        ', ' ');
-            const description = Extractors.pickElement(node, DJINNI_SELECTORS.descriptionSelector)?.text?.trim();
+            const jobUrl = titleEl?.getAttribute('href');
 
-            if (jobId && latestSeenJobId === jobId) {
+            const job = {
+                title: titleEl?.text?.trim(),
+                jobUrl,
+                jobId: Number(jobUrl?.match(/\d+?(?=-)/gm)?.[0]),
+                company: Extractors.pickElement(node, DJINNI_SELECTORS.companySelector)?.text?.trim(),
+                recruiter: Extractors.pickElement(node, DJINNI_SELECTORS.recruiterSelector)?.text?.trim()?.replace('\n        ', ' '),
+                description: Extractors.pickElement(node, DJINNI_SELECTORS.descriptionSelector)?.text?.trim(),
+            }
+
+            if (!this.validateJobProperties(job)) {
+                console.error(funcName, 'Job object is invalid', JSON.stringify(job));
+                continue;
+            }
+
+            jobsOnPage.push(job);
+        }
+
+        const jobIds = jobsOnPage.map(job => job.jobId);
+        const seenJobsOnThisPage = await this.retriveSeenJobIdsByJobId(jobIds)
+        const unseenJobsOnPage: Job[] = [];
+        for (const job of jobsOnPage) {
+            const { jobId } = job;
+            if (jobId && seenJobsOnThisPage.includes(jobId)) {
                 toContinueSearching = false;
                 break;
             }
 
-            if (!jobId || !jobTitle) {
-                console.error(funcName, 'No jobId or jobTitle', 'JobId:', jobId, 'jobTitle', jobTitle);
-                continue;
-            }
-
-            unseenJobsOnPage.push(DataBase.manager.create(Job, { jobId, jobUrl, title: jobTitle, company, recruiter, description }));
+            unseenJobsOnPage.push(DbManager.create(Job, job));
         }
 
         return { unseenJobsOnPage, totalJobs, toContinueSearching };
     }
 
-    async retriveLatestSeenJobId (): Promise<number | undefined> {
+    async retriveSeenJobIdsByJobId (possiblyUnseenJobs: number[]) {
         const funcName = '[retriveLatestSeenJobId]';
         try {
-            const lastSeenJob = await DataBase.manager.findOne(Job, { select: { jobId: true }, where: {}, order: { id: 'DESC' }});
-            return lastSeenJob?.jobId;
+            const lastSeenJobs = await DbManager.createQueryBuilder()
+                .select('"jobId"')
+                .from(Job, 'job')
+                .orderBy({ id: 'DESC' })
+                .where('job."jobId" IN (:...jobIds)', { jobIds: possiblyUnseenJobs })
+                .execute();
+            return lastSeenJobs.map((job: Dictionary<number>) => job.jobId);
         } catch (err: any) {
             console.error(funcName, 'Error finding last seen job from the database', err.message);
         }
@@ -107,9 +126,17 @@ export class JobsWatcher {
 
     async saveUnseenJobs (jobs: Job[]) {
         const funcName = '[saveUnseenJobs]';
+        const jobIds = jobs.map(job => job.jobId);
         try {
-            const insertResults = await DataBase.manager.upsert(Job, jobs, ['jobUrl']);
-            console.log(funcName, 'Successfully saved unseen', insertResults.identifiers.length, 'jobs');
+            await DbManager.transaction(async (transactionalEntityManager) => {
+                const deletedRepublishedJobs = await transactionalEntityManager.createQueryBuilder()
+                        .delete()
+                        .from(Job)
+                        .where('jobId IN (:...jobIds)', { jobIds })
+                        .execute();
+                const insertResults = await transactionalEntityManager.insert(Job, jobs);
+                console.log(funcName, 'Deleted republished jobs:', deletedRepublishedJobs.affected, 'Successfully saved new published', insertResults.identifiers.length, 'jobs');
+            });
         } catch (err: any) {
             console.error(funcName, 'Error saving unseen jobs into the database', err.message);
         }
@@ -121,5 +148,16 @@ export class JobsWatcher {
             await TimeUtils.sleepMs(100);
             HttpRequester.sendTelegramMessage(message, true);
         }
+    }
+
+    validateJobProperties (job: Partial<Job>): job is Job {
+        let property: keyof Job;
+        for (property in job) {
+            if (!job[property]) {
+                console.log(job[property]);
+                return false;
+            }
+        }
+        return true;
     }
 }
