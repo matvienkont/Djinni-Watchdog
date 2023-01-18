@@ -16,4 +16,5 @@ export const DataBase = new DataSource({
     entities: [__dirname + '/entity/*.entity.js'],
     migrations: [__dirname + '/migrations/*.js'],
     // logging: true,
+    synchronize: true,
 });

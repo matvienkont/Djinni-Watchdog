@@ -1,18 +1,16 @@
 import { Dictionary } from "ts-essentials";
-import cfg from "../config.js";
 import { DJINNI_SELECTORS, DJINNI_TRACKING_URL } from "../constants.js";
 import { DataBase } from "../db/connect.js";
 import { Job } from "../db/entity/job.entity.js";
 import { HttpRequester } from "../services/http_requests.js";
 import { Extractors, DataTypesUtils, TimeUtils } from "../services/utils.js";
-import { HTMLElement } from 'node-html-parser';
 
 const http = new HttpRequester();
 const JOBS_PER_PAGE = 15;
 const DbManager = DataBase.manager;
 
 export class JobsWatcher {
-    async watchJobs (firstStart: boolean) {
+    public async watchJobs (firstStart: boolean) {
         const funcName = '[watchJobs]';
         let page = 0;
         let unseenJobs: Job[] = [];
@@ -35,14 +33,14 @@ export class JobsWatcher {
         if (unseenJobs.length) {
             await this.saveUnseenJobs(unseenJobs);
             if (!firstStart) {
-                await this.sendTgNotifications(unseenJobs);
+                await this.notifyNewJobsToTg(unseenJobs);
             }
         } else {
             console.log(funcName, 'No new jobs found.');
         }
     }
 
-    async getHtmlPageOfJobs (page: number) {
+    private async getHtmlPageOfJobs (page: number) {
         const funcName = '[getHtmlPageOfJobs]';
         const url = page ? DJINNI_TRACKING_URL + `&page=${++page}` : DJINNI_TRACKING_URL;
         try {
@@ -58,7 +56,7 @@ export class JobsWatcher {
         }
     }
 
-    async retriveUnseenJobsFromHtml (html: string) {
+    private async retriveUnseenJobsFromHtml (html: string) {
         const funcName = '[extractJobData]';
         let toContinueSearching = true;
         const totalJobs = Number(Extractors.extractNodeFromText(html, DJINNI_SELECTORS.pagesSelector)?.[0]?.innerText);
@@ -108,7 +106,7 @@ export class JobsWatcher {
         return { unseenJobsOnPage, totalJobs, toContinueSearching };
     }
 
-    async retriveSeenJobIdsByJobId (possiblyUnseenJobs: number[]) {
+    private async retriveSeenJobIdsByJobId (possiblyUnseenJobs: number[]) {
         const funcName = '[retriveLatestSeenJobId]';
         try {
             const lastSeenJobs = await DbManager.createQueryBuilder()
@@ -124,7 +122,7 @@ export class JobsWatcher {
         return undefined;
     }
 
-    async saveUnseenJobs (jobs: Job[]) {
+    private async saveUnseenJobs (jobs: Job[]) {
         const funcName = '[saveUnseenJobs]';
         const jobIds = jobs.map(job => job.jobId);
         try {
@@ -135,14 +133,14 @@ export class JobsWatcher {
                         .where('jobId IN (:...jobIds)', { jobIds })
                         .execute();
                 const insertResults = await transactionalEntityManager.insert(Job, jobs);
-                console.log(funcName, 'Deleted republished jobs:', deletedRepublishedJobs.affected, 'Successfully saved new published', insertResults.identifiers.length, 'jobs');
+                console.log(funcName, 'Deleted republished jobs:', deletedRepublishedJobs.affected, '\nSuccessfully saved new published', insertResults.identifiers.length, 'jobs');
             });
         } catch (err: any) {
             console.error(funcName, 'Error saving unseen jobs into the database', err.message);
         }
     }
 
-    async sendTgNotifications (jobs: Job[]) {
+    private async notifyNewJobsToTg (jobs: Job[]) {
         for (const job of jobs) {
             const message = `<b>New Job Alert</b>\n\n${job.title}\n\n${job.company}. ${job.recruiter}\n\n${job.description}\n\n<a href="https://djinni.co${job.jobUrl}">Djinni</a>`
             await TimeUtils.sleepMs(100);
@@ -150,11 +148,11 @@ export class JobsWatcher {
         }
     }
 
-    validateJobProperties (job: Partial<Job>): job is Job {
+    private validateJobProperties (job: Partial<Job>): job is Job {
         let property: keyof Job;
         for (property in job) {
             if (!job[property]) {
-                console.log(job[property]);
+                console.error(job[property], 'does not exist in job object', JSON.stringify(job));
                 return false;
             }
         }

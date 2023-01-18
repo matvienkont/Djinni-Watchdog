@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
+    ports:
+      - '${POSTGRES_PORT}:${POSTGRES_PORT}'
+
+  djinni_watcher:
+    build: ./
+    volumes:
+      - ./:/var/www/djinni_watcher
+    ports:
+      - 3000:3000
+    links:
+      - postgres
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB_NAME=${POSTGRES_DB_NAME}
+      - DJINNI_DOCUMENT_COOKIE=${DJINNI_DOCUMENT_COOKIE}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    command:
+      sh -c 'npm install && npm install typescript -g && tsc && node dist/index.js'
+
+volumes:
+  postgres:
+    driver: local
