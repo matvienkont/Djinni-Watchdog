@@ -79,7 +79,7 @@ export class JobsWatcher {
                 jobId: Number(jobUrl?.match(/\d+?(?=-)/gm)?.[0]),
                 company: Extractors.pickElement(node, DJINNI_SELECTORS.companySelector)?.text?.trim(),
                 recruiter: Extractors.pickElement(node, DJINNI_SELECTORS.recruiterSelector)?.text?.trim()?.replace('\n        ', ' '),
-                description: Extractors.pickElement(node, DJINNI_SELECTORS.descriptionSelector)?.text?.trim(),
+                description: Extractors.pickElement(node, DJINNI_SELECTORS.descriptionSelector)?.innerHTML?.trim()?.replace('<br>', '\n'),
             }
 
             if (!this.validateJobProperties(job)) {
