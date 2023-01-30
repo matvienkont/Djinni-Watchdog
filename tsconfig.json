@@ -2,7 +2,7 @@
     "compilerOptions": {
         "strict": true,
         "moduleResolution": "NodeNext",
-        "target": "ES2017",
+        "target": "ES2021",
         "module": "esnext",
         "experimentalDecorators": true,
         "outDir": "dist",
